@@ -28,14 +28,16 @@
 /* Set this to one of the led_t values that you want to monitor.
  * It can be either num_lock, caps_lock or scroll_lock at the moment.
  */
-#define MONITORED_LED num_lock
+#define SCROLL_LED num_lock
+#define RESET_LED scroll_lock
 
 // State
 static bool   initialized        = false;
 static bool   scroll_enabled     = false;
-static bool   initial_led_state  = false;
 static int8_t delta_x            = 0;
 static int8_t delta_y            = 0;
+
+static led_t initial_led_state;
 
 // Dummy
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {{{KC_NO}}};
@@ -68,7 +70,7 @@ report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
 
 /* We need to wait for the host to have fully communicated the LED state */
 uint32_t initialization_timeout(uint32_t trigger_time, void *cb_arg) {
-    initial_led_state = host_keyboard_led_state().MONITORED_LED;
+    initial_led_state = host_keyboard_led_state();
     initialized = true;
     return 0; // Don't repeat
 }
@@ -81,7 +83,12 @@ bool led_update_user(led_t led_state) {
     if (!initialized)
         return true;
 
-    scroll_enabled = host_keyboard_led_state().MONITORED_LED != initial_led_state;
+    if (initial_led_state.RESET_LED != led_state.RESET_LED) {
+        reset_keyboard();
+        return true;
+    }
+
+    scroll_enabled = led_state.SCROLL_LED != initial_led_state.SCROLL_LED;
     return true;
 }
 
